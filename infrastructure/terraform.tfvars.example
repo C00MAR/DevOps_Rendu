@@ -1,0 +1,9 @@
+# Configuration AWS
+aws_region = "eu-west-1"
+
+project_name = "todo-app"
+environment  = "dev"
+
+# Configuration EC2
+instance_type   = "t2.micro"
+key_pair_name   = "todo-app-key" 
