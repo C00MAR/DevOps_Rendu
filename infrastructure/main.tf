@@ -158,6 +158,7 @@ resource "aws_iam_role_policy" "ec2_dynamodb_policy" {
       {
         Effect = "Allow"
         Action = [
+          "dynamodb:DescribeTable",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:Query",
