@@ -79,3 +79,31 @@ output "useful_commands" {
     ecr_login   = "aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
   }
 }
+
+output "cloudwatch_log_groups" {
+  description = "CloudWatch Log Groups"
+  value = {
+    client = aws_cloudwatch_log_group.todo_app_client.name
+    server = aws_cloudwatch_log_group.todo_app_server.name
+    system = aws_cloudwatch_log_group.todo_app_system.name
+  }
+}
+
+output "cloudwatch_dashboard_url" {
+  description = "URL of the CloudWatch Dashboard"
+  value       = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.todo_app.dashboard_name}"
+}
+
+output "sns_topic_arn" {
+  description = "SNS Topic ARN for alerts"
+  value       = aws_sns_topic.alerts.arn
+}
+
+output "monitoring_urls" {
+  description = "Monitoring and observability URLs"
+  value = {
+    cloudwatch_dashboard = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.todo_app.dashboard_name}"
+    cloudwatch_logs      = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#logsV2:log-groups"
+    cloudwatch_alarms    = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#alarmsV2:"
+  }
+}

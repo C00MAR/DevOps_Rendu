@@ -236,3 +236,109 @@ resource "aws_ecr_repository" "server" {
     Name = "${var.project_name}-server-repo"
   }
 }
+
+resource "aws_cloudwatch_log_group" "todo_app_client" {
+  name              = "/aws/todo-app/client"
+  retention_in_days = 7
+
+  tags = {
+    Name = "${var.project_name}-client-logs"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "todo_app_server" {
+  name              = "/aws/todo-app/server"
+  retention_in_days = 7
+
+  tags = {
+    Name = "${var.project_name}-server-logs"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "todo_app_system" {
+  name              = "/aws/todo-app/system"
+  retention_in_days = 7
+
+  tags = {
+    Name = "${var.project_name}-system-logs"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_errors" {
+  alarm_name          = "${var.project_name}-api-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ErrorCount"
+  namespace           = "TodoApp/API"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors API errors"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  tags = {
+    Name = "${var.project_name}-api-errors-alarm"
+  }
+}
+
+resource "aws_cloudwatch_dashboard" "todo_app" {
+  dashboard_name = "${var.project_name}-dashboard"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web.id],
+            [".", "NetworkIn", ".", "."],
+            [".", "NetworkOut", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "EC2 Instance Metrics"
+          period  = 300
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", aws_dynamodb_table.todos.name],
+            [".", "ConsumedWriteCapacityUnits", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "DynamoDB Metrics"
+          period  = 300
+        }
+      },
+      {
+        type   = "log"
+        x      = 0
+        y      = 12
+        width  = 24
+        height = 6
+
+        properties = {
+          query   = "SOURCE '/aws/todo-app/server' | fields @timestamp, @message | sort @timestamp desc | limit 100"
+          region  = var.aws_region
+          title   = "Recent API Logs"
+        }
+      }
+    ]
+  })
+}

@@ -1,5 +1,4 @@
 services:
-    # Frontend React (production build)
     client:
         build:
             context: ./client
@@ -13,8 +12,14 @@ services:
         restart: unless-stopped
         networks:
             - todo-network
+        logging:
+            driver: awslogs
+            options:
+                awslogs-group: /aws/todo-app/client
+                awslogs-region: eu-west-1
+                awslogs-stream-prefix: client
+                awslogs-create-group: "true"
 
-    # Backend Node.js (production)
     server:
         build:
             context: ./server
@@ -26,24 +31,38 @@ services:
             - PORT=5001
             - AWS_REGION=eu-west-1
             - DYNAMODB_TABLE_NAME=todo-app-todos
-            # AWS credentials seront récupérées via IAM role sur l'instance EC2
         restart: unless-stopped
         networks:
             - todo-network
+        logging:
+            driver: awslogs
+            options:
+                awslogs-group: /aws/todo-app/server
+                awslogs-region: eu-west-1
+                awslogs-stream-prefix: server
+                awslogs-create-group: "true"
 
-    # Nginx reverse proxy (optionnel pour la production)
-    nginx:
-        image: nginx:alpine
-        ports:
-            - "3000:80"
+    cloudwatch-agent:
+        image: amazon/cloudwatch-agent:latest
         volumes:
-            - ./nginx.conf:/etc/nginx/nginx.conf:ro
-        depends_on:
-            - client
-            - server
+            - /proc:/rootfs/proc:ro
+            - /sys:/rootfs/sys:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - /var/lib/docker/:/var/lib/docker:ro
+            - /cgroup:/rootfs/cgroup:ro
+            - ./cloudwatch-config.json:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json:ro
+        environment:
+            - CW_CONFIG_CONTENT=file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
         restart: unless-stopped
         networks:
             - todo-network
+        logging:
+            driver: awslogs
+            options:
+                awslogs-group: /aws/todo-app/system
+                awslogs-region: eu-west-1
+                awslogs-stream-prefix: cloudwatch-agent
+                awslogs-create-group: "true"
 
 networks:
     todo-network:

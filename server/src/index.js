@@ -3,6 +3,8 @@ const cors = require("cors");
 const AWS = require("aws-sdk");
 require("dotenv").config();
 
+const { metricsMiddleware, startMetricsCollection } = require("./middleware/metrics");
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -25,9 +27,31 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || "todos-local";
 app.use(cors());
 app.use(express.json());
 
+app.use(metricsMiddleware);
+
+app.use((req, res, next) => {
+	const timestamp = new Date().toISOString();
+	console.log(`[${timestamp}] ${req.method} ${req.path} - IP: ${req.ip}`);
+	next();
+});
+
 // Health check
 app.get("/health", (req, res) => {
-	res.json({ status: "OK", timestamp: new Date().toISOString() });
+	res.json({ 
+		status: "OK", 
+		timestamp: new Date().toISOString(),
+		version: "1.0.0",
+		environment: process.env.NODE_ENV || "development"
+	});
+});
+
+app.get("/metrics", (req, res) => {
+	res.json({
+		uptime: process.uptime(),
+		memory: process.memoryUsage(),
+		timestamp: new Date().toISOString(),
+		pid: process.pid
+	});
 });
 
 // Créer la table en développement
@@ -178,16 +202,38 @@ app.delete("/todos/:id", async (req, res) => {
 	}
 });
 
-// Démarrage du serveur
+app.use((error, req, res, next) => {
+	console.error("Erreur non gérée:", error);
+	res.status(500).json({ 
+		error: "Erreur serveur interne",
+		timestamp: new Date().toISOString()
+	});
+});
+
+process.on('SIGTERM', () => {
+	console.log('SIGTERM reçu, arrêt du serveur...');
+	process.exit(0);
+});
+
+process.on('SIGINT', () => {
+	console.log('SIGINT reçu, arrêt du serveur...');
+	process.exit(0);
+});
+
 async function startServer() {
 	try {
 		await createTableIfNotExists();
+		
+		if (process.env.NODE_ENV === "production") {
+			startMetricsCollection();
+		}
 
 		app.listen(PORT, "0.0.0.0", () => {
 			console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 			console.log(`📊 Environnement: ${process.env.NODE_ENV || "development"}`);
 			console.log(`📋 Table DynamoDB: ${TABLE_NAME}`);
 			console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+			console.log(`metrique : http://localhost:${PORT}/metrics`);
 		});
 	} catch (error) {
 		console.error("Erreur lors du démarrage du serveur:", error);
