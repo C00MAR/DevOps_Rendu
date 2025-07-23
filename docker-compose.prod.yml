@@ -1,0 +1,50 @@
+services:
+    # Frontend React (production build)
+    client:
+        build:
+            context: ./client
+            dockerfile: Dockerfile
+        ports:
+            - "80:80"
+        environment:
+            - REACT_APP_API_URL=http://3.251.78.158:5001
+        depends_on:
+            - server
+        restart: unless-stopped
+        networks:
+            - todo-network
+
+    # Backend Node.js (production)
+    server:
+        build:
+            context: ./server
+            dockerfile: Dockerfile
+        ports:
+            - "5001:5001"
+        environment:
+            - NODE_ENV=production
+            - PORT=5001
+            - AWS_REGION=eu-west-1
+            - DYNAMODB_TABLE_NAME=todo-app-todos
+            # AWS credentials seront récupérées via IAM role sur l'instance EC2
+        restart: unless-stopped
+        networks:
+            - todo-network
+
+    # Nginx reverse proxy (optionnel pour la production)
+    nginx:
+        image: nginx:alpine
+        ports:
+            - "3000:80"
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+        depends_on:
+            - client
+            - server
+        restart: unless-stopped
+        networks:
+            - todo-network
+
+networks:
+    todo-network:
+        driver: bridge

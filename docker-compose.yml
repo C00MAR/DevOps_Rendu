@@ -1,0 +1,70 @@
+services:
+    # Frontend React
+    client:
+        build:
+            context: ./client
+            dockerfile: Dockerfile.dev
+        ports:
+            - "3000:3000"
+        volumes:
+            - ./client:/app
+            - /app/node_modules
+        environment:
+            - REACT_APP_API_URL=http://localhost:5001
+            - CHOKIDAR_USEPOLLING=true # Pour le hot reload sur Windows/Mac
+        depends_on:
+            - server
+        networks:
+            - todo-network
+
+    # Backend Node.js
+    server:
+        build:
+            context: ./server
+            dockerfile: Dockerfile.dev
+        ports:
+            - "5001:5001"
+        volumes:
+            - ./server:/app
+            - /app/node_modules
+        environment:
+            - NODE_ENV=development
+            - PORT=5001
+            - AWS_REGION=eu-west-1
+            - DYNAMODB_ENDPOINT=http://dynamodb:8000
+            - DYNAMODB_TABLE_NAME=todos-local
+        depends_on:
+            - dynamodb
+        networks:
+            - todo-network
+
+    # DynamoDB Local (pour le développement)
+    dynamodb:
+        image: amazon/dynamodb-local:latest
+        container_name: dynamodb-local
+        ports:
+            - "8000:8000"
+        command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+        networks:
+            - todo-network
+
+    # DynamoDB Admin (interface web pour voir les données)
+    dynamodb-admin:
+        image: aaronshaf/dynamodb-admin:latest
+        ports:
+            - "8001:8001"
+        environment:
+            - DYNAMO_ENDPOINT=http://dynamodb:8000
+        depends_on:
+            - dynamodb
+        networks:
+            - todo-network
+
+networks:
+    todo-network:
+        driver: bridge
+
+# Volumes pour persister les node_modules
+volumes:
+    client_node_modules:
+    server_node_modules:

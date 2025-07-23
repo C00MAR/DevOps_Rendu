@@ -1,0 +1,27 @@
+# Image de base Node.js
+FROM node:18-alpine
+
+# Installer des outils utiles pour le développement
+RUN apk add --no-cache git curl
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer toutes les dépendances (dev incluses)
+RUN npm install
+
+# Installer nodemon globalement pour le hot reload
+RUN npm install -g nodemon
+
+# Exposer le port 5001
+EXPOSE 5001
+
+# Variables d'environnement pour le développement
+ENV NODE_ENV=development
+ENV PORT=5001
+
+# Commande pour démarrer avec nodemon (hot reload)
+CMD ["nodemon", "src/index.js"]
