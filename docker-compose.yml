@@ -11,7 +11,7 @@ services:
             - /app/node_modules
         environment:
             - REACT_APP_API_URL=http://localhost:5001
-            - CHOKIDAR_USEPOLLING=true # Pour le hot reload sur Windows/Mac
+            - CHOKIDAR_USEPOLLING=true
         depends_on:
             - server
         networks:

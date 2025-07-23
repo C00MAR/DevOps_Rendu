@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script pour déployer l'application sur l'instance EC2 de Marc
+# Script pour déployer l'application sur l'instance EC2
 # Usage: ./scripts/deploy.sh
 
 set -e
@@ -8,7 +8,7 @@ set -e
 # Configuration
 EC2_HOST="3.251.78.158"
 EC2_USER="ec2-user"
-KEY_PATH="${HOME}/.ssh/todo-app-key.pem"  # Ajustez le chemin si nécessaire
+KEY_PATH="${HOME}/.ssh/todo-app-key.pem"
 APP_DIR="/home/ec2-user/todo-app"
 
 echo "🚀 Déploiement de l'application Todo sur l'instance EC2..."
