@@ -112,6 +112,21 @@ app.put("/todos/:id", async (req, res) => {
 		const { id } = req.params;
 		const { title, description, completed } = req.body;
 
+		if (!title) {
+			return res.status(400).json({ error: "Le titre est requis" });
+		}
+
+		// Vérifier si l'item existe
+		const getParams = {
+			TableName: TABLE_NAME,
+			Key: { id },
+		};
+
+		const existingItem = await dynamodb.get(getParams).promise();
+		if (!existingItem.Item) {
+			return res.status(404).json({ error: "Todo non trouvé" });
+		}
+
 		const params = {
 			TableName: TABLE_NAME,
 			Key: { id },
@@ -138,6 +153,17 @@ app.put("/todos/:id", async (req, res) => {
 app.delete("/todos/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
+
+		// Vérifier si l'item existe
+		const getParams = {
+			TableName: TABLE_NAME,
+			Key: { id },
+		};
+
+		const existingItem = await dynamodb.get(getParams).promise();
+		if (!existingItem.Item) {
+			return res.status(404).json({ error: "Todo non trouvé" });
+		}
 
 		const params = {
 			TableName: TABLE_NAME,
