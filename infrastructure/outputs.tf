@@ -67,7 +67,7 @@ output "app_urls" {
   description = "URLs to access the application"
   value = {
     frontend = "http://${aws_instance.web.public_ip}:3000"
-    api      = "http://${aws_instance.web.public_ip}:5000"
+    api      = "http://${aws_instance.web.public_ip}:5001"
     ssh      = "ssh -i ${var.key_pair_name}.pem ec2-user@${aws_instance.web.public_ip}"
   }
 }

@@ -104,8 +104,8 @@ resource "aws_security_group" "web" {
 
   ingress {
     description = "API"
-    from_port   = 5000
-    to_port     = 5000
+    from_port   = 5001
+    to_port     = 5001
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }

@@ -49,3 +49,5 @@ terraform.rc
 # AWS credentials (just in case)
 .aws/
 credentials
+
+todo-app-key.pem
