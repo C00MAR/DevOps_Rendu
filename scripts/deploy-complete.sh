@@ -165,7 +165,7 @@ ssh_exec "mkdir -p $APP_DIR"
 
 # Copier les fichiers de configuration
 log_info "Copie des fichiers de configuration..."
-scp_copy "docker compose.prod.yml" "$APP_DIR/docker compose.yml"
+scp_copy "docker-compose.prod.yml" "$APP_DIR/docker-compose.yml"
 scp_copy "cloudwatch-config.json" "$APP_DIR/"
 
 # Copier les scripts
@@ -182,22 +182,22 @@ ssh_exec "
     aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
     
     # Arrêter les services existants
-    docker compose down || true
+    docker-compose down || true
     
     # Nettoyer les anciennes images
     docker image prune -f
     
     # Récupérer les nouvelles images
-    docker compose pull
+    docker-compose pull
     
     # Démarrer les services
-    docker compose up -d
+    docker-compose up -d
     
     # Attendre que les services soient prêts
     sleep 20
     
     echo '📊 Statut des conteneurs:'
-    docker compose ps
+    docker-compose ps
 "
 
 # Étape 6 : Tests de santé
@@ -209,7 +209,7 @@ if curl -f http://$EC2_HOST:5001/health &> /dev/null; then
     log_success "API de santé: OK"
 else
     log_error "API de santé: KO"
-    ssh_exec "cd $APP_DIR && docker compose logs server"
+    ssh_exec "cd $APP_DIR && docker-compose logs server"
 fi
 
 # Test du frontend
@@ -217,7 +217,7 @@ if curl -f http://$EC2_HOST &> /dev/null; then
     log_success "Frontend: OK"
 else
     log_warning "Frontend: Problème détecté"
-    ssh_exec "cd $APP_DIR && docker compose logs client"
+    ssh_exec "cd $APP_DIR && docker-compose logs client"
 fi
 
 # Test des métriques
@@ -245,8 +245,8 @@ echo "   CloudWatch Alarms: (voir terraform output monitoring_urls)"
 echo ""
 echo "🔧 Commandes utiles:"
 echo "   SSH: ssh -i $KEY_PATH $EC2_USER@$EC2_HOST"
-echo "   Logs: ssh -i $KEY_PATH $EC2_USER@$EC2_HOST 'cd $APP_DIR && docker compose logs -f'"
-echo "   Redémarrer: ssh -i $KEY_PATH $EC2_USER@$EC2_HOST 'cd $APP_DIR && docker compose restart'"
+echo "   Logs: ssh -i $KEY_PATH $EC2_USER@$EC2_HOST 'cd $APP_DIR && docker-compose logs -f'"
+echo "   Redémarrer: ssh -i $KEY_PATH $EC2_USER@$EC2_HOST 'cd $APP_DIR && docker-compose restart'"
 echo ""
 
 # Afficher les URLs CloudWatch

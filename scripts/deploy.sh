@@ -45,9 +45,9 @@ echo "✅ Connexion SSH établie"
 echo "📁 Création du répertoire de l'application..."
 ssh_exec "mkdir -p $APP_DIR"
 
-# Copier les fichiers docker compose et configuration
+# Copier les fichiers docker-compose et configuration
 echo "📋 Copie des fichiers de configuration..."
-scp_copy "docker compose.prod.yml" "$APP_DIR/docker compose.yml"
+scp_copy "docker-compose.prod.yml" "$APP_DIR/docker-compose.yml"
 
 # Si nginx.conf existe, le copier aussi
 if [[ -f "nginx.conf" ]]; then
@@ -68,15 +68,15 @@ ssh_exec "aws ecr get-login-password --region eu-west-1 | docker login --usernam
 
 # Arrêter les services existants
 echo "⏹️  Arrêt des services existants..."
-ssh_exec "cd $APP_DIR && docker compose down || true"
+ssh_exec "cd $APP_DIR && docker-compose down || true"
 
 # Récupérer les dernières images
 echo "📥 Récupération des dernières images..."
-ssh_exec "cd $APP_DIR && docker compose pull"
+ssh_exec "cd $APP_DIR && docker-compose pull"
 
 # Démarrer les services
 echo "▶️  Démarrage des services..."
-ssh_exec "cd $APP_DIR && docker compose up -d"
+ssh_exec "cd $APP_DIR && docker-compose up -d"
 
 # Attendre que les services soient prêts
 echo "⏳ Attente que les services soient prêts..."
@@ -90,7 +90,7 @@ if ssh_exec "curl -f http://localhost:5001/health"; then
     echo "✅ Backend API: OK"
 else
     echo "⚠️  Backend API: Problème détecté"
-    ssh_exec "cd $APP_DIR && docker compose logs server"
+    ssh_exec "cd $APP_DIR && docker-compose logs server"
 fi
 
 # Vérifier le frontend
@@ -98,7 +98,7 @@ if ssh_exec "curl -f http://localhost:80"; then
     echo "✅ Frontend: OK"
 else
     echo "⚠️  Frontend: Problème détecté"
-    ssh_exec "cd $APP_DIR && docker compose logs client"
+    ssh_exec "cd $APP_DIR && docker-compose logs client"
 fi
 
 echo ""
@@ -110,6 +110,6 @@ echo "   Backend:  http://$EC2_HOST:5001"
 echo ""
 echo "📋 Commandes utiles sur l'instance :"
 echo "   SSH:          ssh -i $KEY_PATH $EC2_USER@$EC2_HOST"
-echo "   Logs:         cd $APP_DIR && docker compose logs -f"
-echo "   Redémarrer:   cd $APP_DIR && docker compose restart"
-echo "   Arrêter:      cd $APP_DIR && docker compose down"
+echo "   Logs:         cd $APP_DIR && docker-compose logs -f"
+echo "   Redémarrer:   cd $APP_DIR && docker-compose restart"
+echo "   Arrêter:      cd $APP_DIR && docker-compose down"

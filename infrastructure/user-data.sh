@@ -14,11 +14,11 @@ systemctl enable docker
 usermod -a -G docker ec2-user
 
 mkdir -p /usr/local/lib/docker/cli-plugins
-curl -SL "https://github.com/docker/compose/releases/download/v2.21.0/docker compose-linux-x86_64" -o /usr/local/lib/docker/cli-plugins/docker compose
-chmod +x /usr/local/lib/docker/cli-plugins/docker compose
+curl -SL "https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-linux-x86_64" -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-ln -sf /usr/local/lib/docker/cli-plugins/docker compose /usr/local/bin/docker compose
-chmod +x /usr/local/bin/docker compose
+ln -sf /usr/local/lib/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
 
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 yum install -y unzip
@@ -37,7 +37,7 @@ export ECR_REGISTRY=$ECR_REGISTRY
 
 export PATH="/usr/local/bin:/usr/local/lib/docker/cli-plugins:\$PATH"
 
-alias docker compose='/usr/local/bin/docker compose'
+alias docker-compose='/usr/local/bin/docker-compose'
 
 ecr-login() {
     aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_REGISTRY

@@ -95,9 +95,9 @@ jobs:
           mkdir -p /home/ec2-user/todo-app
           cd /home/ec2-user/todo-app
           
-          if ! command -v docker compose &> /dev/null; then
-            echo "Docker compose not find"
-            alias docker compose='docker compose'
+          if ! command -v docker-compose &> /dev/null; then
+            echo "docker-compose not find"
+            alias docker-compose='docker-compose'
           fi
           
           echo "login ECR"
@@ -108,9 +108,9 @@ jobs:
             exit 1
           fi
           
-          if [ ! -f docker compose.yml ]; then
-            echo "creation docker compose.yml..."
-            cat > docker compose.yml << 'EOF'
+          if [ ! -f docker-compose.yml ]; then
+            echo "creation docker-compose.yml..."
+            cat > docker-compose.yml << 'EOF'
           services:
             client:
               image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
@@ -145,21 +145,21 @@ jobs:
           fi
           
           echo "stop services run"
-          docker compose down || true
+          docker-compose down || true
           
           echo "clean images"
           docker image prune -f
           
           echo "crawl images"
-          docker compose pull
+          docker-compose pull
           
           echo "start services"
-          docker compose up -d
+          docker-compose up -d
           
           sleep 30
           
           echo "Statut :"
-          docker compose ps
+          docker-compose ps
 
     - name: Health Check
       run: |
