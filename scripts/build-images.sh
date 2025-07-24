@@ -29,7 +29,7 @@ echo "📦 Tag: ${TAG}"
 # Builder l'image du client (React)
 echo "📱 Building client image..."
 docker build \
-    --build-arg REACT_APP_API_URL=http://3.251.78.158:5001 \
+    --build-arg REACT_APP_API_URL=http://18.203.139.83:5001 \
     -t ${CLIENT_REPO}:${TAG} \
     -t ${CLIENT_REPO}:latest \
     -f client/Dockerfile \

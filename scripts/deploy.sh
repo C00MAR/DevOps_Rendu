@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-EC2_HOST="3.251.78.158"
+EC2_HOST="18.203.139.83"
 EC2_USER="ec2-user"
 KEY_PATH="${HOME}/.ssh/todo-app-key.pem"
 APP_DIR="/home/ec2-user/todo-app"

@@ -3,8 +3,6 @@ name: CI/CD Pipeline - Todo App
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 env:
   AWS_REGION: eu-west-1
@@ -30,14 +28,10 @@ jobs:
           client/package-lock.json
           server/package-lock.json
 
-    - name: Install client dependencies
+    - name: Install and test client
       run: |
         cd client
         npm ci
-
-    - name: Run client tests
-      run: |
-        cd client
         npm test -- --coverage --passWithNoTests
 
     - name: Install server dependencies
@@ -49,7 +43,6 @@ jobs:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
     steps:
     - name: Checkout code
@@ -63,83 +56,78 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Login to Amazon ECR
-      id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Generate image tags
-      id: meta
-      run: |
-        echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-        echo "TIMESTAMP=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-        echo "TAG=${GITHUB_SHA::8}-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-
     - name: Build and push client image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ steps.meta.outputs.TAG }}
       run: |
         cd client
         docker build \
-          --build-arg REACT_APP_API_URL=http://3.251.78.158:5001 \
-          -t $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:$IMAGE_TAG \
+          --build-arg REACT_APP_API_URL=http://18.203.139.83:5001 \
           -t $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:latest \
           .
-        docker push $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:latest
 
     - name: Build and push server image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ steps.meta.outputs.TAG }}
       run: |
         cd server
         docker build \
-          -t $ECR_REGISTRY/$ECR_SERVER_REPOSITORY:$IMAGE_TAG \
           -t $ECR_REGISTRY/$ECR_SERVER_REPOSITORY:latest \
           .
-        docker push $ECR_REGISTRY/$ECR_SERVER_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_SERVER_REPOSITORY:latest
-
-    outputs:
-      image-tag: ${{ steps.meta.outputs.TAG }}
-      client-image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_CLIENT_REPOSITORY }}:${{ steps.meta.outputs.TAG }}
-      server-image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_SERVER_REPOSITORY }}:${{ steps.meta.outputs.TAG }}
 
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/todo-app-key.pem
-        chmod 600 ~/.ssh/todo-app-key.pem
-        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
     - name: Deploy to EC2
-      env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
-      run: |
-        scp -i ~/.ssh/todo-app-key.pem docker-compose.prod.yml ec2-user@$EC2_HOST:/home/ec2-user/todo-app/docker-compose.yml
-        
-        ssh -i ~/.ssh/todo-app-key.pem ec2-user@$EC2_HOST << 'EOF'
-          cd /home/ec2-user/todo-app
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          cd /home/ec2-user/todo-app || mkdir -p /home/ec2-user/todo-app && cd /home/ec2-user/todo-app
           
           aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 135808930620.dkr.ecr.eu-west-1.amazonaws.com
+          
+          if [ ! -f docker-compose.yml ]; then
+            cat > docker-compose.yml << 'EOF'
+          services:
+            client:
+              image: 135808930620.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
+              ports:
+                - "80:80"
+              environment:
+                - REACT_APP_API_URL=http://18.203.139.83:5001
+              depends_on:
+                - server
+              restart: unless-stopped
+              networks:
+                - todo-network
+
+            server:
+              image: 135808930620.dkr.ecr.eu-west-1.amazonaws.com/todo-app/server:latest
+              ports:
+                - "5001:5001"
+              environment:
+                - NODE_ENV=production
+                - PORT=5001
+                - AWS_REGION=eu-west-1
+                - DYNAMODB_TABLE_NAME=todo-app-todos
+              restart: unless-stopped
+              networks:
+                - todo-network
+
+          networks:
+            todo-network:
+              driver: bridge
+          EOF
+          fi
           
           docker-compose down || true
           
@@ -151,26 +139,12 @@ jobs:
           
           sleep 15
           docker-compose ps
-        EOF
 
     - name: Health Check
-      env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
       run: |
         sleep 30
-        
-        curl -f http://$EC2_HOST:5001/health || exit 1
-        
-        curl -f http://$EC2_HOST || exit 1
-
-    - name: Deployment notification
-      if: always()
-      run: |
-        if [ ${{ job.status }} == 'success' ]; then
-          echo "deploiment reussi"
-          echo "front : http://${{ secrets.EC2_HOST }}"
-          echo "api : http://${{ secrets.EC2_HOST }}:5001"
-        else
-          echo "echec"
-          exit 1
-        fi
+        curl -f http://${{ secrets.EC2_HOST }}:5001/health || (echo "API Health Check Failed" && exit 1)
+        curl -f http://${{ secrets.EC2_HOST }} || (echo "Frontend Health Check Failed" && exit 1)
+        echo "deploy succes"
+        echo "front: http://${{ secrets.EC2_HOST }}"
+        echo "api: http://${{ secrets.EC2_HOST }}:5001"
