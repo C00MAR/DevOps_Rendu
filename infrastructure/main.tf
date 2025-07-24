@@ -167,6 +167,27 @@ resource "aws_iam_role_policy" "ec2_dynamodb_policy" {
           "dynamodb:DeleteItem"
         ]
         Resource = aws_dynamodb_table.todos.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/todo-app/*"
       }
     ]
   })
