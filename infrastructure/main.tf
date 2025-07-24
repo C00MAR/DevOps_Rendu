@@ -270,7 +270,6 @@ resource "aws_ecr_repository" "server" {
   }
 }
 
-# CloudWatch Log Groups - Créer en tant que ressources
 resource "aws_cloudwatch_log_group" "app_client" {
   name              = "/aws/todo-app/client"
   retention_in_days = 7
