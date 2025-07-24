@@ -3,6 +3,8 @@ name: CI/CD Pipeline - Todo App
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 env:
   AWS_REGION: eu-west-1
@@ -164,19 +166,18 @@ jobs:
     - name: Health Check
       run: |
         sleep 30
+
+        if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}; then
+          echo "client Health Check: OK"
+        else
+          echo "client Health Check: WARNING"
+        fi
         
         if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}:5001/health; then
           echo "API Health Check: OK"
         else
           echo "API Health Check: FAILED"
           exit 1
-        fi
-        
-        # Test du client
-        if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}; then
-          echo "client Health Check: OK"
-        else
-          echo "client Health Check: WARNING"
         fi
         
         echo ""
