@@ -66,8 +66,8 @@ output "aws_account_id" {
 output "app_urls" {
   description = "URLs to access the application"
   value = {
-    frontend = "http://${aws_instance.web.public_ip}:3000"
-    api      = "http://${aws_instance.web.public_ip}:5001"
+    frontend = "http://${aws_instance.web.public_ip}"
+    api      = "http://${aws_instance.web.public_ip}:3001"
     ssh      = "ssh -i ${var.key_pair_name}.pem ec2-user@${aws_instance.web.public_ip}"
   }
 }
@@ -83,9 +83,9 @@ output "useful_commands" {
 output "cloudwatch_log_groups" {
   description = "CloudWatch Log Groups"
   value = {
-    client = aws_cloudwatch_log_group.todo_app_client.name
-    server = aws_cloudwatch_log_group.todo_app_server.name
-    system = aws_cloudwatch_log_group.todo_app_system.name
+    client = aws_cloudwatch_log_group.app_client.name
+    server = aws_cloudwatch_log_group.app_server.name
+    system = aws_cloudwatch_log_group.app_system.name
   }
 }
 

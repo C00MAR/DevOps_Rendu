@@ -48,9 +48,6 @@ EOL
 mkdir -p /home/ec2-user/todo-app
 chown -R ec2-user:ec2-user /home/ec2-user/todo-app
 
-chmod +x /home/ec2-user/todo-app/deploy-help.sh
-chown ec2-user:ec2-user /home/ec2-user/todo-app/deploy-help.sh
-
 yum install -y amazon-cloudwatch-agent
 
 systemctl restart docker
@@ -59,5 +56,3 @@ sleep 10
 
 echo "User data script completed at $(date)" > /var/log/user-data.log
 echo "Instance ready deployment" >> /var/log/user-data.log
-
-wall "Todo EC2 instance is good : Run '/home/ec2-user/todo-app/deploy-help.sh' for deployment instructions."

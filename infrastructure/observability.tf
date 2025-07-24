@@ -28,68 +28,6 @@ resource "aws_cloudwatch_log_group" "ec2_logs" {
   }
 }
 
-resource "aws_cloudwatch_dashboard" "todo_app_dashboard" {
-  dashboard_name = "${var.project_name}-dashboard"
-
-  dashboard_body = jsonencode({
-    widgets = [
-      {
-        type   = "metric"
-        x      = 0
-        y      = 0
-        width  = 12
-        height = 6
-
-        properties = {
-          metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web.id],
-            [".", "NetworkIn", ".", "."],
-            [".", "NetworkOut", ".", "."]
-          ]
-          view    = "timeSeries"
-          stacked = false
-          region  = var.aws_region
-          title   = "EC2 Instance Metrics"
-          period  = 300
-        }
-      },
-      {
-        type   = "metric"
-        x      = 0
-        y      = 6
-        width  = 12
-        height = 6
-
-        properties = {
-          metrics = [
-            ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", aws_dynamodb_table.todos.name],
-            [".", "ConsumedWriteCapacityUnits", ".", "."],
-            [".", "ItemCount", ".", "."]
-          ]
-          view    = "timeSeries"
-          stacked = false
-          region  = var.aws_region
-          title   = "DynamoDB Metrics"
-          period  = 300
-        }
-      },
-      {
-        type   = "log"
-        x      = 0
-        y      = 12
-        width  = 24
-        height = 6
-
-        properties = {
-          query   = "SOURCE '/aws/ec2/todo-app/server' | fields @timestamp, @message | sort @timestamp desc | limit 50"
-          region  = var.aws_region
-          title   = "Recent Server Logs"
-        }
-      }
-    ]
-  })
-}
-
 resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   alarm_name          = "${var.project_name}-high-cpu"
   comparison_operator = "GreaterThanThreshold"
@@ -108,14 +46,6 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 
   tags = {
     Name = "${var.project_name}-high-cpu-alarm"
-  }
-}
-
-resource "aws_sns_topic" "alerts" {
-  name = "${var.project_name}-alerts"
-
-  tags = {
-    Name = "${var.project_name}-alerts-topic"
   }
 }
 

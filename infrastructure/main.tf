@@ -104,8 +104,8 @@ resource "aws_security_group" "web" {
 
   ingress {
     description = "API"
-    from_port   = 5001
-    to_port     = 5001
+    from_port   = 3001
+    to_port     = 3001
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -188,6 +188,15 @@ resource "aws_iam_role_policy" "ec2_dynamodb_policy" {
           "logs:DescribeLogGroups"
         ]
         Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/todo-app/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -234,8 +243,10 @@ resource "aws_dynamodb_table" "todos" {
   }
 }
 
+# ECR Repositories avec force_delete pour éviter les erreurs
 resource "aws_ecr_repository" "client" {
-  name = "${var.project_name}/client"
+  name         = "${var.project_name}-client"
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -247,7 +258,8 @@ resource "aws_ecr_repository" "client" {
 }
 
 resource "aws_ecr_repository" "server" {
-  name = "${var.project_name}/server"
+  name         = "${var.project_name}-server"
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -258,7 +270,8 @@ resource "aws_ecr_repository" "server" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "todo_app_client" {
+# CloudWatch Log Groups - Créer en tant que ressources
+resource "aws_cloudwatch_log_group" "app_client" {
   name              = "/aws/todo-app/client"
   retention_in_days = 7
 
@@ -267,7 +280,7 @@ resource "aws_cloudwatch_log_group" "todo_app_client" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "todo_app_server" {
+resource "aws_cloudwatch_log_group" "app_server" {
   name              = "/aws/todo-app/server"
   retention_in_days = 7
 
@@ -276,7 +289,7 @@ resource "aws_cloudwatch_log_group" "todo_app_server" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "todo_app_system" {
+resource "aws_cloudwatch_log_group" "app_system" {
   name              = "/aws/todo-app/system"
   retention_in_days = 7
 
@@ -348,6 +361,26 @@ resource "aws_cloudwatch_dashboard" "todo_app" {
         }
       },
       {
+        type   = "metric"
+        x      = 0
+        y      = 12
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["TodoApp/API", "RequestCount", "Service", "TodoAppAPI"],
+            [".", "ErrorCount", ".", "."],
+            [".", "AverageResponseTime", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "Application Metrics"
+          period  = 300
+        }
+      },
+      {
         type   = "log"
         x      = 0
         y      = 12
@@ -362,4 +395,12 @@ resource "aws_cloudwatch_dashboard" "todo_app" {
       }
     ]
   })
+}
+
+resource "aws_sns_topic" "alerts" {
+  name = "${var.project_name}-alerts"
+
+  tags = {
+    Name = "${var.project_name}-alerts-topic"
+  }
 }
