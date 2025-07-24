@@ -18,25 +18,25 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-# Vérifier que docker-compose est installé
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose n'est pas installé. Veuillez l'installer d'abord."
+# Vérifier que docker compose est disponible
+if ! docker compose version &> /dev/null; then
+    echo "❌ Docker Compose n'est pas disponible. Veuillez l'installer d'abord."
     exit 1
 fi
 
 # Nettoyer les containers précédents si nécessaire
 echo "🧹 Nettoyage des containers précédents..."
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
 
 # Reconstruire les images si demandé
 if [[ "$1" == "--build" || "$1" == "-b" ]]; then
     echo "🔨 Reconstruction des images Docker..."
-    docker-compose build --no-cache
+    docker compose build --no-cache
 fi
 
 # Démarrer tous les services
 echo "📦 Démarrage des services..."
-docker-compose up -d
+docker compose up -d
 
 # Attendre que les services soient prêts
 echo "⏳ Attente que les services soient prêts..."
@@ -77,11 +77,11 @@ echo "   DynamoDB:     http://localhost:8000"
 echo "   DynamoDB UI:  http://localhost:8001"
 echo ""
 echo "📋 Commandes utiles :"
-echo "   Voir les logs:        docker-compose logs -f"
-echo "   Arrêter les services: docker-compose down"
-echo "   Redémarrer:           docker-compose restart"
+echo "   Voir les logs:        docker compose logs -f"
+echo "   Arrêter les services: docker compose down"
+echo "   Redémarrer:           docker compose restart"
 echo ""
 echo "👀 Affichage des logs (Ctrl+C pour quitter):"
 
 # Suivre les logs
-docker-compose logs -f
+docker compose logs -f
