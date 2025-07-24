@@ -7,8 +7,8 @@ on:
 env:
   AWS_REGION: eu-west-1
   ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com
-  ECR_FRONTEND_REPOSITORY: todo-app-client
-  ECR_BACKEND_REPOSITORY: todo-app-server
+  ECR_client_REPOSITORY: todo-app-client
+  ECR_server_REPOSITORY: todo-app-server
 
 jobs:
   test:
@@ -25,18 +25,18 @@ jobs:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: |
-          frontend/package-lock.json
-          backend/package-lock.json
+          client/package-lock.json
+          server/package-lock.json
 
-    - name: Install and test frontend
+    - name: Install and test client
       run: |
-        cd frontend
+        cd client
         npm ci
         npm test -- --coverage --passWithNoTests
 
-    - name: Install backend dependencies
+    - name: Install server dependencies
       run: |
-        cd backend
+        cd server
         npm ci
 
   build-and-push:
@@ -58,21 +58,21 @@ jobs:
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build and push frontend image
+    - name: Build and push client image
       run: |
-        cd frontend
+        cd client
         docker build \
-          -t $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest \
+          -t $ECR_REGISTRY/$ECR_client_REPOSITORY:latest \
           .
-        docker push $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_client_REPOSITORY:latest
 
-    - name: Build and push backend image
+    - name: Build and push server image
       run: |
-        cd backend
+        cd server
         docker build \
-          -t $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:latest \
+          -t $ECR_REGISTRY/$ECR_server_REPOSITORY:latest \
           .
-        docker push $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_server_REPOSITORY:latest
 
   deploy:
     name: Deploy to EC2
@@ -112,20 +112,20 @@ jobs:
             echo "creation docker-compose.yml..."
             cat > docker-compose.yml << 'EOF'
           services:
-            frontend:
+            client:
               image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
               ports:
                 - "80:80"
               environment:
-                - BACKEND_HOST=${{ secrets.EC2_HOST }}
-                - BACKEND_PORT=3001
+                - server_HOST=${{ secrets.EC2_HOST }}
+                - server_PORT=3001
               depends_on:
-                - backend
+                - server
               restart: unless-stopped
               networks:
                 - todo-network
 
-            backend:
+            server:
               image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/server:latest
               ports:
                 - "3001:3001"
@@ -172,17 +172,17 @@ jobs:
           exit 1
         fi
         
-        # Test du frontend
+        # Test du client
         if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}; then
-          echo "Frontend Health Check: OK"
+          echo "client Health Check: OK"
         else
-          echo "Frontend Health Check: WARNING"
+          echo "client Health Check: WARNING"
         fi
         
         echo ""
         echo "Deploy Good"
         echo "url  appli :"
-        echo "   Frontend: http://${{ secrets.EC2_HOST }}"
+        echo "   client: http://${{ secrets.EC2_HOST }}"
         echo "   API: http://${{ secrets.EC2_HOST }}:3001"
         echo "   Health Check: http://${{ secrets.EC2_HOST }}:3001/api/health"
   
