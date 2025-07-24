@@ -1,37 +1,26 @@
 services:
-  client:
-    image: 135808930620.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
+  frontend:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
     ports:
       - "80:80"
     environment:
-      - REACT_APP_API_URL=http://34.244.72.177:5001
+      - BACKEND_HOST=${EC2_HOST:-localhost}
+      - BACKEND_PORT=3001
     depends_on:
-      - server
+      - backend
     restart: unless-stopped
     networks:
       - todo-network
 
-  server:
-    image: 135808930620.dkr.ecr.eu-west-1.amazonaws.com/todo-app/server:latest
+  backend:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/server:latest
     ports:
-      - "5001:5001"
+      - "3001:3001"
     environment:
       - NODE_ENV=production
-      - PORT=5001
+      - PORT=3001
       - AWS_REGION=eu-west-1
       - DYNAMODB_TABLE_NAME=todo-app-todos
-    restart: unless-stopped
-    networks:
-      - todo-network
-
-  cloudwatch-agent:
-    image: amazon/cloudwatch-agent:latest
-    volumes:
-      - /proc:/rootfs/proc:ro
-      - /sys:/rootfs/sys:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      - CW_CONFIG_CONTENT={"agent":{"metrics_collection_interval":60},"metrics":{"namespace":"TodoApp","metrics_collected":{"cpu":{"measurement":["cpu_usage_idle","cpu_usage_user"],"metrics_collection_interval":60},"disk":{"measurement":["used_percent"],"metrics_collection_interval":60,"resources":["*"]},"mem":{"measurement":["mem_used_percent"],"metrics_collection_interval":60}}}}
     restart: unless-stopped
     networks:
       - todo-network

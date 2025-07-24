@@ -48,7 +48,7 @@ const sendMetricsToCloudWatch = async () => {
 				Dimensions: [
 					{
 						Name: "Service",
-						Value: "TodoAPI",
+						Value: "TodoAppAPI",
 					},
 				],
 			},
@@ -60,7 +60,7 @@ const sendMetricsToCloudWatch = async () => {
 				Dimensions: [
 					{
 						Name: "Service",
-						Value: "TodoAPI",
+						Value: "TodoAppAPI",
 					},
 				],
 			},
@@ -72,7 +72,7 @@ const sendMetricsToCloudWatch = async () => {
 				Dimensions: [
 					{
 						Name: "Service",
-						Value: "TodoAPI",
+						Value: "TodoAppAPI",
 					},
 				],
 			},
@@ -87,7 +87,7 @@ const sendMetricsToCloudWatch = async () => {
 				Dimensions: [
 					{
 						Name: "Service",
-						Value: "TodoAPI",
+						Value: "TodoAppAPI",
 					},
 				],
 			});

@@ -6,9 +6,9 @@ on:
 
 env:
   AWS_REGION: eu-west-1
-  ECR_REGISTRY: 135808930620.dkr.ecr.eu-west-1.amazonaws.com
-  ECR_CLIENT_REPOSITORY: todo-app/client
-  ECR_SERVER_REPOSITORY: todo-app/server
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com
+  ECR_FRONTEND_REPOSITORY: todo-app/client
+  ECR_BACKEND_REPOSITORY: todo-app/server
 
 jobs:
   test:
@@ -25,18 +25,18 @@ jobs:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: |
-          client/package-lock.json
-          server/package-lock.json
+          frontend/package-lock.json
+          backend/package-lock.json
 
-    - name: Install and test client
+    - name: Install and test frontend
       run: |
-        cd client
+        cd frontend
         npm ci
         npm test -- --coverage --passWithNoTests
 
-    - name: Install server dependencies
+    - name: Install backend dependencies
       run: |
-        cd server
+        cd backend
         npm ci
 
   build-and-push:
@@ -58,22 +58,21 @@ jobs:
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build and push client image
+    - name: Build and push frontend image
       run: |
-        cd client
+        cd frontend
         docker build \
-          --build-arg REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:5001 \
-          -t $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:latest \
+          -t $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest \
           .
-        docker push $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:latest
 
-    - name: Build and push server image
+    - name: Build and push backend image
       run: |
-        cd server
+        cd backend
         docker build \
-          -t $ECR_REGISTRY/$ECR_SERVER_REPOSITORY:latest \
+          -t $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:latest \
           .
-        docker push $ECR_REGISTRY/$ECR_SERVER_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:latest
 
   deploy:
     name: Deploy to EC2
@@ -102,7 +101,7 @@ jobs:
           fi
           
           echo "login ECR"
-          aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 135808930620.dkr.ecr.eu-west-1.amazonaws.com
+          aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com
           
           if [ $? -ne 0 ]; then
             echo "error login ecr"
@@ -113,25 +112,26 @@ jobs:
             echo "creation docker-compose.yml..."
             cat > docker-compose.yml << 'EOF'
           services:
-            client:
-              image: 135808930620.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
+            frontend:
+              image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/client:latest
               ports:
                 - "80:80"
               environment:
-                - REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:5001
+                - BACKEND_HOST=${{ secrets.EC2_HOST }}
+                - BACKEND_PORT=3001
               depends_on:
-                - server
+                - backend
               restart: unless-stopped
               networks:
                 - todo-network
 
-            server:
-              image: 135808930620.dkr.ecr.eu-west-1.amazonaws.com/todo-app/server:latest
+            backend:
+              image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com/todo-app/server:latest
               ports:
-                - "5001:5001"
+                - "3001:3001"
               environment:
                 - NODE_ENV=production
-                - PORT=5001
+                - PORT=3001
                 - AWS_REGION=eu-west-1
                 - DYNAMODB_TABLE_NAME=todo-app-todos
               restart: unless-stopped
@@ -165,7 +165,7 @@ jobs:
       run: |
         sleep 30
         
-        if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}:5001/health; then
+        if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}:3001/api/health; then
           echo "API Health Check: OK"
         else
           echo "API Health Check: FAILED"
@@ -183,5 +183,6 @@ jobs:
         echo "Deploy Good"
         echo "url  appli :"
         echo "   Frontend: http://${{ secrets.EC2_HOST }}"
-        echo "   API: http://${{ secrets.EC2_HOST }}:5001"
-        echo "   Health Check: http://${{ secrets.EC2_HOST }}:5001/health"
+        echo "   API: http://${{ secrets.EC2_HOST }}:3001"
+        echo "   Health Check: http://${{ secrets.EC2_HOST }}:3001/api/health"
+  
