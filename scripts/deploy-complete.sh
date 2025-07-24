@@ -9,7 +9,7 @@ set -e
 AWS_REGION="eu-west-1"
 AWS_ACCOUNT_ID="135808930620"
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-EC2_HOST="18.203.139.83"
+EC2_HOST="34.244.72.177"
 EC2_USER="ec2-user"
 KEY_PATH="${HOME}/.ssh/todo-app-key.pem"
 APP_DIR="/home/ec2-user/todo-app"

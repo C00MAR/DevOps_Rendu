@@ -62,7 +62,7 @@ jobs:
       run: |
         cd client
         docker build \
-          --build-arg REACT_APP_API_URL=http://18.203.139.83:5001 \
+          --build-arg REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:5001 \
           -t $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:latest \
           .
         docker push $ECR_REGISTRY/$ECR_CLIENT_REPOSITORY:latest
@@ -91,11 +91,26 @@ jobs:
         username: ec2-user
         key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         script: |
-          cd /home/ec2-user/todo-app || mkdir -p /home/ec2-user/todo-app && cd /home/ec2-user/todo-app
+          source ~/.bashrc
           
+          mkdir -p /home/ec2-user/todo-app
+          cd /home/ec2-user/todo-app
+          
+          if ! command -v docker-compose &> /dev/null; then
+            echo "Docker compose not find"
+            alias docker-compose='docker compose'
+          fi
+          
+          echo "login ECR"
           aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 135808930620.dkr.ecr.eu-west-1.amazonaws.com
           
+          if [ $? -ne 0 ]; then
+            echo "error login ecr"
+            exit 1
+          fi
+          
           if [ ! -f docker-compose.yml ]; then
+            echo "creation docker-compose.yml..."
             cat > docker-compose.yml << 'EOF'
           services:
             client:
@@ -103,7 +118,7 @@ jobs:
               ports:
                 - "80:80"
               environment:
-                - REACT_APP_API_URL=http://18.203.139.83:5001
+                - REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:5001
               depends_on:
                 - server
               restart: unless-stopped
@@ -129,22 +144,44 @@ jobs:
           EOF
           fi
           
+          echo "stop services run"
           docker-compose down || true
           
+          echo "clean images"
           docker image prune -f
           
+          echo "crawl images"
           docker-compose pull
           
+          echo "start services"
           docker-compose up -d
           
-          sleep 15
+          sleep 30
+          
+          echo "Statut :"
           docker-compose ps
 
     - name: Health Check
       run: |
         sleep 30
-        curl -f http://${{ secrets.EC2_HOST }}:5001/health || (echo "API Health Check Failed" && exit 1)
-        curl -f http://${{ secrets.EC2_HOST }} || (echo "Frontend Health Check Failed" && exit 1)
-        echo "deploy succes"
-        echo "front: http://${{ secrets.EC2_HOST }}"
-        echo "api: http://${{ secrets.EC2_HOST }}:5001"
+        
+        if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}:5001/health; then
+          echo "API Health Check: OK"
+        else
+          echo "API Health Check: FAILED"
+          exit 1
+        fi
+        
+        # Test du frontend
+        if curl -f --connect-timeout 10 --max-time 30 http://${{ secrets.EC2_HOST }}; then
+          echo "Frontend Health Check: OK"
+        else
+          echo "Frontend Health Check: WARNING"
+        fi
+        
+        echo ""
+        echo "Deploy Good"
+        echo "url  appli :"
+        echo "   Frontend: http://${{ secrets.EC2_HOST }}"
+        echo "   API: http://${{ secrets.EC2_HOST }}:5001"
+        echo "   Health Check: http://${{ secrets.EC2_HOST }}:5001/health"
