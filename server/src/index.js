@@ -136,10 +136,6 @@ app.put("/todos/:id", async (req, res) => {
 		const { id } = req.params;
 		const { title, description, completed } = req.body;
 
-		if (!title) {
-			return res.status(400).json({ error: "Le titre est requis" });
-		}
-
 		// Vérifier si l'item existe
 		const getParams = {
 			TableName: TABLE_NAME,
@@ -151,17 +147,35 @@ app.put("/todos/:id", async (req, res) => {
 			return res.status(404).json({ error: "Todo non trouvé" });
 		}
 
+		// Construire dynamiquement l'expression de mise à jour
+		let updateExpression = "SET updatedAt = :updatedAt";
+		const expressionAttributeValues = {
+			":updatedAt": new Date().toISOString(),
+		};
+
+		if (title !== undefined) {
+			if (!title.trim()) {
+				return res.status(400).json({ error: "Le titre ne peut pas être vide" });
+			}
+			updateExpression += ", title = :title";
+			expressionAttributeValues[":title"] = title;
+		}
+
+		if (description !== undefined) {
+			updateExpression += ", description = :description";
+			expressionAttributeValues[":description"] = description || "";
+		}
+
+		if (completed !== undefined) {
+			updateExpression += ", completed = :completed";
+			expressionAttributeValues[":completed"] = completed;
+		}
+
 		const params = {
 			TableName: TABLE_NAME,
 			Key: { id },
-			UpdateExpression:
-				"SET title = :title, description = :description, completed = :completed, updatedAt = :updatedAt",
-			ExpressionAttributeValues: {
-				":title": title,
-				":description": description || "",
-				":completed": completed || false,
-				":updatedAt": new Date().toISOString(),
-			},
+			UpdateExpression: updateExpression,
+			ExpressionAttributeValues: expressionAttributeValues,
 			ReturnValues: "ALL_NEW",
 		};
 
