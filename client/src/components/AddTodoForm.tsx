@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CreateTodoRequest } from '../types/Todo';
-
+import '../App.css';
 interface AddTodoFormProps {
   onAdd: (todo: CreateTodoRequest) => Promise<any>;
 }
@@ -37,7 +37,7 @@ export const AddTodoForm: React.FC<AddTodoFormProps> = ({ onAdd }) => {
   return (
     <div className="bg-dark-card border border-dark-border rounded-lg p-6">
       <form onSubmit={handleSubmit}>
-        <div className="mb-4">
+        <div className="mb-4 ">
           <input
             type="text"
             value={title}
@@ -77,7 +77,7 @@ export const AddTodoForm: React.FC<AddTodoFormProps> = ({ onAdd }) => {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 lime-bg text-black rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!title.trim() || isSubmitting}
               >
                 {isSubmitting ? 'Ajout...' : 'Ajouter'}

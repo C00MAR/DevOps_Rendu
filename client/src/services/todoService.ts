@@ -17,7 +17,23 @@ class TodoService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      // Vérifier s'il y a du contenu à parser
+      const contentType = response.headers.get('content-type');
+      const contentLength = response.headers.get('content-length');
+      
+      // Si c'est une réponse 204 (No Content) ou si le content-length est 0, ne pas essayer de parser le JSON
+      if (response.status === 204 || contentLength === '0') {
+        return null;
+      }
+      
+      // Si le content-type n'est pas JSON, ne pas essayer de parser
+      if (contentType && !contentType.includes('application/json')) {
+        return null;
+      }
+
+      // Essayer de parser le JSON seulement s'il y a du contenu
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
     } catch (error) {
       console.error('API call failed:', error);
       throw error;
