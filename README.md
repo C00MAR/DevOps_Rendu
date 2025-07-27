@@ -51,6 +51,7 @@ Cette application Todo démontre l'implémentation d'une stack DevOps en intégr
 -   **CloudWatch** : Centralisation des logs, métriques et dashboards
 -   **IAM** : Gestion des accès avec rôles spécialisés
 
+![Architecture Todo App](docs/architecture.svg)
 
 ## 📋 Prérequis
 
